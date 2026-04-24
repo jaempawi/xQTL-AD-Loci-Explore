@@ -13,6 +13,15 @@ dat <- read_csv("data.csv", show_col_types = FALSE) %>%
     top_confidence = factor(top_confidence, levels = c("CL1","CL2","CL3","CL4","CL5"))
   )
 
+# Trans columns — present after pipeline is re-run with trans data
+has_trans <- all(c("n_trans_genes","trans_genes") %in% names(dat))
+if (!has_trans) {
+  dat$n_trans_genes   <- NA_integer_
+  dat$trans_genes     <- NA_character_
+  dat$n_trans_contexts <- NA_integer_
+  dat$trans_contexts  <- NA_character_
+}
+
 ct_cols <- c("ct_Brain_xQTL","ct_Exc_xQTL","ct_Inh_xQTL","ct_Oli_xQTL",
              "ct_OPC_xQTL","ct_Ast_xQTL","ct_Microglia_xQTL","ct_Bulk_Immune_xQTL")
 ct_labels <- c("Brain","Excitatory","Inhibitory","Oligodendrocyte",
@@ -281,7 +290,7 @@ ui <- fluidPage(
   # Header
   div(class="app-header",
     div(
-      div(class="app-title", "AD xQTL Loci Explorer"),
+      div(class="app-title", "xQTL AD Loci Explorer"),
       div(class="app-subtitle", "FunGen Consortium · ADSP Functional Genomics · Alzheimer's Disease Sequencing Project")
     ),
     div(class="header-pills",
@@ -513,6 +522,8 @@ server <- function(input, output, session) {
       Rank        = paste0("#", cv2f_rank),
       Confidence  = conf_badge(as.character(top_confidence)),
       `#Ctx`      = n_contexts,
+      `#Trans`    = ifelse(!is.na(n_trans_genes) & n_trans_genes > 0,
+                           as.character(n_trans_genes), "—"),
       `xQTL PIP`  = round(xqtl_max_inclusion, 3),
       `TWAS z`    = round(max_twas_z, 2),
       TWAS        = bool_badge(twas_sig),
@@ -662,7 +673,30 @@ server <- function(input, output, session) {
       )
     )
 
-    tagList(gwas_sec, gene_sec, ctx_sec, ct_sec)
+    # Trans xQTL section — shown only when trans data is available
+    trans_sec <- if (!is.na(r$n_trans_genes) && r$n_trans_genes > 0) {
+      trans_gene_list <- strsplit(r$trans_genes, "\\|")[[1]]
+      trans_ctx_list  <- if (!is.na(r$trans_contexts)) strsplit(r$trans_contexts, "\\|")[[1]] else character(0)
+      div(class="detail-section",
+        div(class="detail-section-title",
+          HTML('<span style="color:#7c3aed">&#x21F4;</span> Trans xQTL Target Genes'),
+          span(style="font-size:10px;color:#adb5bd;font-weight:400;margin-left:6px",
+               paste0(r$n_trans_genes, " gene", if(r$n_trans_genes>1) "s" else "",
+                      " · ", ifelse(is.na(r$n_trans_contexts), "?", r$n_trans_contexts),
+                      " context", if(!is.na(r$n_trans_contexts) && r$n_trans_contexts>1) "s" else ""))
+        ),
+        div(style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px",
+          tagList(lapply(trans_gene_list, function(g) {
+            span(style="background:#f5f3ff;color:#6d28d9;padding:2px 8px;border-radius:4px;font-size:11px;font-family:monospace;border:1px solid #ddd6fe", g)
+          }))
+        ),
+        if (length(trans_ctx_list) > 0)
+          div(style="margin-top:6px;font-size:11px;color:#6b7280",
+            strong("Contexts: "), paste(trans_ctx_list, collapse=" · "))
+      )
+    }
+
+    tagList(gwas_sec, gene_sec, ctx_sec, ct_sec, trans_sec)
   })
 }
 
