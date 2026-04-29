@@ -39,7 +39,7 @@ Your app will be live at:
 ### shinyapps.io free tier limits
 - 5 apps
 - 25 active hours/month (resets monthly)
-- Fine for consortium sharing — upgrade to Starter ($9/mo) for unlimited hours
+- Fine for consortium sharing — upgrade to Starter ($9/mo) for_unlimited hours
 
 ---
 
