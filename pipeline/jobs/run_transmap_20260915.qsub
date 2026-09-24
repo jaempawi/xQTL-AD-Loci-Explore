@@ -1,0 +1,13 @@
+#!/bin/bash -l
+#$ -P xqtl
+#$ -N transmap915
+#$ -l h_rt=24:00:00
+#$ -pe omp 8
+#$ -l mem_per_core=16G
+#$ -j y
+#$ -o /restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL/logs/transmap_20260915.log
+cd /restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL
+echo "START $(date)  host=$(hostname)"
+~/.pixi/bin/Rscript complete_ADlocus_level_summary_SCC2_20260915.R
+rc=$?
+echo "END   $(date)  exit=$rc"

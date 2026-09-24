@@ -1,51 +1,78 @@
-# xQTL-AD-Loci-Explore
+# xQTL AD Loci Explorer
 
-Interactive Shiny app for browsing xQTL evidence at Alzheimer's disease GWAS loci.
+Code and released tables behind the **AD Loci Explorer**, a browsable view of the
+ADSP FunGen-xQTL release across 188 candidate Alzheimer's disease loci.
 
-**Live app:** https://jenny-empawi.shinyapps.io/xQTL-AD-loci-Explore/
+Live app: https://jenny-empawi.shinyapps.io/xQTL-AD-loci-Explore/
 
----
+## Layout
 
-## Overview
-
-This app visualises results from the FunGen-xQTL consortium ADSP Functional Genomics pipeline, linking AD GWAS variants to molecular QTL evidence across brain cell types.
-
-### Data contents (current build)
-- **4,817 rows** — one per variant × gene pair with xQTL evidence
-- **Sources:** Brain eQTL · Brain pQTL · Brain gpQTL · Excitatory / Inhibitory / Oligodendrocyte / OPC / Astrocyte / Microglia / Bulk Immune eQTL · MiGA eQTL (GFM, GTS, SVZ, THA)
-- **Trans xQTL:** 2,263 loci with at least one trans-acting gene
-
-### Features
-- Filter by chromosome, GWAS study, significance level, confidence level, cell type, and functional evidence (TWAS / MR / cTWAS)
-- Toggle individual cell-type columns on/off
-- Side detail panel per variant — shows evidence contexts, cell type breakdown, and trans xQTL target genes
-- Download filtered results as CSV
-
----
-
-## Repository structure
-
-| File/Folder | Description |
-|-------------|-------------|
-| `app.R` | Shiny app source (R) |
-| `data.csv` | Processed display data (generated from flat file pipeline) |
-| `DEPLOY.md` | Step-by-step deployment instructions |
-| `data/` | Jupyter notebook + Excel summary table |
-
----
-
-## Updating the data
-
-Re-run `AD_loci_xQTL_table_updated.ipynb` on the cluster with the latest flat file, then re-deploy to shinyapps.io:
-
-```r
-rsconnect::deployApp(appDir = ".", appName = "xQTL-AD-loci-Explore", account = "jenny-empawi")
+```
+app/          Shiny application (runnable as-is)
+pipeline/     Scripts that build the locus-level tables
+  staging/    Metadata and helper functions the main script reads
+  jobs/       SGE submission scripts for the cluster
+  dev/        Ad-hoc inspection scripts; not pipeline steps
+data/188_loci/  Released locus- and variant-level tables for this build
+docs/         Deployment notes
 ```
 
-See `DEPLOY.md` for full instructions.
+## Requirements
 
----
+R with `data.table`, `stringr`, `openxlsx`, `shiny`, `ggplot2`, and `pecotmr`;
+Python 3 with `pandas`. The Excel summary step uses `openxlsx`.
 
-## Citation / Contact
+## Running the pipeline
 
-FunGen-xQTL Consortium · ADSP Functional Genomics
+Both path roots are environment variables, so the pipeline is not tied to one
+filesystem:
+
+```bash
+export AD_LOCI_ROOT=/path/to/AD_loci_xQTL     # where the input trees live
+export AD_LOCI_OUT=$AD_LOCI_ROOT/out_$(date +%Y%m%d)   # optional; defaults to out_<today>
+```
+
+Stage order:
+
+1. `pipeline/fetch_from_hpc.sh` — stage input tables locally.
+2. `pipeline/add_evidence_source.R` — register an evidence source in
+   `staging/metadata_analysis.csv`. Registering a source there is the only step
+   needed to add one; the main script picks it up automatically.
+3. `pipeline/complete_ADlocus_level_summary_fixed.R` — the main build. Reads the
+   metadata, assembles fine-mapping, colocalization, TWAS/MR and cTWAS evidence
+   per variant and gene, assigns confidence tiers T1-T6, and writes the
+   per-variant tables plus the unified Excel summary into `$AD_LOCI_OUT`.
+4. `pipeline/tier_assign_202609.py` and `pipeline/classify_confidence.py` —
+   gene-level tier and confidence assignment over the tables from step 3.
+5. `pipeline/coloc_validate.py` — colocalization sanity checks.
+6. `app/build_shiny_data.R` — collapses the release into `app/data.csv`, the
+   single table the Explorer reads.
+
+### Confidence tiers
+
+T1-T5 describe genes with localized AD-xQTL support, ordered by strength of
+evidence. **T6** covers genes supported only by gene-level TWAS/MR or cTWAS
+evidence, with no localized xQTL signal. Because the tier chain is evaluated
+over rows of the xQTL overlap table, a gene with no localized support never
+reaches the final branch; the main script therefore assigns T6 directly from
+the gene-level XWAS/MR and cTWAS tables produced earlier in the same run.
+
+## Running the app
+
+```r
+shiny::runApp("app")
+```
+
+`app/data.csv` is included, so the Explorer runs from a clone without the
+pipeline.
+
+## Data
+
+`data/188_loci/` holds the locus summary and the unified variant-level table
+for this build. Upstream inputs — GWAS fine-mapping exports, xQTL
+colocalization results and the LD reference — are not redistributed here; they
+are released through the AD Knowledge Portal on Synapse (`syn68872650`).
+
+Derived from ADSP/NIAGADS study data. Downstream use of the underlying
+individual-level and controlled-access resources is governed by their own data
+use terms.
