@@ -129,7 +129,61 @@ It emits one toploci file per context with the columns the build expects:
 A source in any other format needs its own loader in `scripts/build_AD_locus_table.R`;
 follow one of the existing `Method ==` blocks.
 
+## Methodology
+
+The build assembles the locus table from three families of evidence. Everything
+is keyed on variant identity: an xQTL result is attached to an AD locus because
+the two name the same variant, not because they fall within some distance of
+each other, so no window or flanking parameter is involved.
+
+**AD loci.** The locus set is imported, not derived here. The build auto-detects
+the AD GWAS top-loci tables present in its input directory (eight studies in the
+188-loci build) and takes their credible sets as given; GWAS fine-mapping is run
+upstream and is not repeated by this pipeline. Locus identifiers are ordinals
+within a single build, so the same identifier does not necessarily denote the
+same locus in another build, and comparisons across builds have to be made on
+variant IDs. Two flags are recorded per locus: whether it is supported only by
+proxy-based GWAS, and whether it falls in the APOE region
+(chr19:43,905,790-45,905,791), which is reported separately because its extreme
+linkage disequilibrium makes fine-mapping and colocalization there hard to read.
+
+**xQTL evidence.** `config/metadata_analysis.csv` is the registry of every
+exported analysis table the build reads; the `Method` column selects the reader
+used for each one. The loaded rows are gene-by-variant-by-context evidence of
+three kinds: fine-mapping (single-context SuSiE, fSuSiE, and multi-context),
+colocalization, and gene-level association (TWAS, MR, cTWAS). Rows that claim a
+method but lack its statistic are dropped, so a colocalization row with no VCP
+and a fine-mapping row with no PIP do not enter the table.
+
+**Variant inclusion probability.** Each surviving row is reduced to one number by
+precedence rather than by averaging: the colocalization VCP if present,
+otherwise the fine-mapping PIP, otherwise the colocalization SNP-level PPH4. The
+maximum across all methods and sources is then taken per variant, and the method
+that produced that maximum is recorded alongside it. Because it is a maximum, a
+newly added source can only raise a variant's score; it can never lower one.
+The GWAS methods, sources, and effect directions behind each variant are
+collapsed into parallel `|`-separated fields on the same row.
+
+**Tier assignment.** Tiers are evaluated per variant, gene, and context group by
+the rules in the next section, and each gene is then reported at the strongest
+tier it reaches anywhere.
+
+**Outputs.** The build writes the locus-level summary, the variant-level
+membership table, and the unified workbook to `$AD_LOCI_OUT`.
+`scripts/validate_outputs.R` then checks that release against the expectations
+of this build: the expected tables are present, 188 loci, 508 genes, and the
+published tier distribution.
+
 ## Confidence tiers
+
+| tier | evidence |
+|---|---|
+| T1 | cTWAS or MR, plus a 95% credible set overlap from single-context or fSuSiE fine-mapping |
+| T2 | cTWAS or MR, plus colocalization |
+| T3 | TWAS, plus either a 95% credible set overlap or colocalization |
+| T4 | a 95% credible set overlap from single-context or fSuSiE fine-mapping |
+| T5 | colocalization, or a fine-mapping overlap that is not a single-context 95% set (multi-context, cs50, cs70) |
+| T6 | gene-level TWAS, MR, or cTWAS only, with no localized xQTL signal |
 
 `scripts/gene_prio_utils.R` assigns `top_confidence` per row during the build. T1-T5
 describe genes with localized AD-xQTL support, ordered by strength of evidence.
