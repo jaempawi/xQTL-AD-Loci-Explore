@@ -27,3 +27,5 @@ published here.
 
 Derived from ADSP/NIAGADS study data. Use of the underlying controlled-access
 resources is governed by their own data use terms.
+
+GWAS credible sets in this build were fine-mapped with SuSiE-RSS EB-mix, and transmap colocalization is included as an evidence source. See `../README.md` for what differs between the builds.

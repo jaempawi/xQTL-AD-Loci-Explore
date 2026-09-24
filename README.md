@@ -142,7 +142,11 @@ by two neighbouring ones.
 ### Step 1: the AD locus set
 
 The locus set is imported, not derived here: GWAS fine-mapping is run upstream
-and is not repeated by this pipeline. At startup the build scans the registry
+and is not repeated by this pipeline. The credible sets behind the current
+build come from eight AD GWAS studies fine-mapped with SuSiE-RSS EB-mix; the
+earlier 183-loci release used SuSiE-RSS version 1 on the same studies, which is
+why the two are not nested (see `data/README.md`).
+At startup the build scans the registry
 for the analysis methods that point at per-context top-loci files and reports
 what it found, so the source list is discovered from the configuration rather
 than hardcoded. The job log records it as `[toploci] auto-detected sources`.
