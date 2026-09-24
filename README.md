@@ -13,7 +13,7 @@ scripts/
   gene_prio_utils.R        helper functions, including the T1-T6 tier rules
   add_evidence_source.R    register a new evidence source (see 'Adding data')
   validate_outputs.R       check a release against the expectations of this build
-run_pipeline.qsub          end-to-end job script for the SCC scheduler
+  run_pipeline.qsub        end-to-end job script for the SCC scheduler
 config/                    metadata tables the build reads
 data/                      released tables, one directory per build
 app/                       Shiny application, runnable from a clone
@@ -131,48 +131,109 @@ follow one of the existing `Method ==` blocks.
 
 ## Methodology
 
-The build assembles the locus table from three families of evidence. Everything
-is keyed on variant identity: an xQTL result is attached to an AD locus because
-the two name the same variant, not because they fall within some distance of
-each other, so no window or flanking parameter is involved.
+This section describes what the build does, step by step, and the thresholds it
+applies. Two terms recur. A *credible set* is the small group of variants that
+fine-mapping says most likely contains the causal one; 95% coverage (cs95) means
+the set is built to have a 95% chance of containing it, and cs70 and cs50 are
+weaker versions of the same idea. *Colocalization* asks whether an AD signal and
+a molecular signal in the same place are driven by the same variant rather than
+by two neighbouring ones.
 
-**AD loci.** The locus set is imported, not derived here. The build auto-detects
-the AD GWAS top-loci tables present in its input directory (eight studies in the
-188-loci build) and takes their credible sets as given; GWAS fine-mapping is run
-upstream and is not repeated by this pipeline. Locus identifiers are ordinals
-within a single build, so the same identifier does not necessarily denote the
-same locus in another build, and comparisons across builds have to be made on
-variant IDs. Two flags are recorded per locus: whether it is supported only by
-proxy-based GWAS, and whether it falls in the APOE region
-(chr19:43,905,790-45,905,791), which is reported separately because its extreme
-linkage disequilibrium makes fine-mapping and colocalization there hard to read.
+### Step 1: the AD locus set
 
-**xQTL evidence.** `config/metadata_analysis.csv` is the registry of every
-exported analysis table the build reads; the `Method` column selects the reader
-used for each one. The loaded rows are gene-by-variant-by-context evidence of
-three kinds: fine-mapping (single-context SuSiE, fSuSiE, and multi-context),
-colocalization, and gene-level association (TWAS, MR, cTWAS). Rows that claim a
-method but lack its statistic are dropped, so a colocalization row with no VCP
-and a fine-mapping row with no PIP do not enter the table.
+The locus set is imported, not derived here: GWAS fine-mapping is run upstream
+and is not repeated by this pipeline. At startup the build scans the registry
+for the analysis methods that point at per-context top-loci files and reports
+what it found, so the source list is discovered from the configuration rather
+than hardcoded. The job log records it as `[toploci] auto-detected sources`.
 
-**Variant inclusion probability.** Each surviving row is reduced to one number by
-precedence rather than by averaging: the colocalization VCP if present,
-otherwise the fine-mapping PIP, otherwise the colocalization SNP-level PPH4. The
-maximum across all methods and sources is then taken per variant, and the method
-that produced that maximum is recorded alongside it. Because it is a maximum, a
-newly added source can only raise a variant's score; it can never lower one.
-The GWAS methods, sources, and effect directions behind each variant are
-collapsed into parallel `|`-separated fields on the same row.
+### Step 2: harmonization
 
-**Tier assignment.** Tiers are evaluated per variant, gene, and context group by
-the rules in the next section, and each gene is then reported at the strongest
-tier it reaches anywhere.
+Nothing is merged until the identifiers agree.
 
-**Outputs.** The build writes the locus-level summary, the variant-level
-membership table, and the unified workbook to `$AD_LOCI_OUT`.
-`scripts/validate_outputs.R` then checks that release against the expectations
-of this build: the expected tables are present, 188 loci, 508 genes, and the
-published tier distribution.
+*Contexts.* Dataset and assay labels are mapped to one harmonized context name
+through `config/contexts_metadata.csv`. Single-nucleus tables that carry a cell
+type instead of a context are mapped by cell type.
+
+*Variants.* Identifiers arrive in several spellings. Underscores are converted
+to colons and a `chr` prefix is added where it is missing, but the merge itself
+is done on chromosome and position rather than on the identifier string, and the
+AD locus table's spelling is then adopted for the merged row. This is what
+absorbs allele-order differences: where two sources name the same position with
+the alleles written the other way round, the merge still succeeds, and the build
+counts the disagreeing spellings instead of dropping those variants (213 of
+5,318 in this build).
+
+*Events and genes.* Event identifiers have trailing `_chr`, `_ENSG` and `_gp`
+fragments stripped. Genes are matched on the Ensembl ID with the version suffix
+removed, so `ENSG00000141510.16` and `ENSG00000141510` are treated as the same
+gene.
+
+*GWAS studies.* Source and study names are harmonized so that one GWAS is not
+counted twice under two labels.
+
+### Step 3: evidence families and their significance rules
+
+| evidence | what makes it count |
+|---|---|
+| fine-mapping | membership in a credible set; the coverage level is recorded on each row as cs95, cs70 or cs50, and the strongest level available is kept per locus |
+| colocalization | a variant-level colocalization probability (VCP), or the SNP-level PPH4 where that is what the method reports |
+| TWAS | gene-level p < 2.5e-6, either in the selected best method or in more than half of the methods run, evaluated per gene, block, context and GWAS source |
+| MR | TWAS-significant, and cPIP > 0.5, and at least two credible sets, and I2 < 0.5 |
+| cTWAS | a non-empty credible set and SuSiE PIP > 0.75 |
+
+A row that names a method but lacks that method's statistic is dropped, so a
+colocalization row with no VCP and a fine-mapping row with no PIP never enter
+the table.
+
+### Step 4: one number per variant
+
+Each surviving row is reduced to a single `variant_inclusion_probability` by
+precedence rather than by averaging: the colocalization VCP when present,
+otherwise the fine-mapping PIP, otherwise the SNP-level PPH4. The maximum across
+every method and source is then taken per variant, and the method that produced
+that maximum is recorded beside it. Because it is a maximum, adding a source can
+only raise a variant's score and never lower it; a score that falls between two
+builds therefore means the inputs or the filtering changed, not merely that
+something was added. The GWAS methods, sources and effect directions behind each
+variant are collapsed into parallel `|`-separated fields on the same row.
+
+### Step 5: assembling and filtering loci
+
+A locus identifier is built from its chromosome and the first and last positions
+of its member variants, and the loci are then numbered in order. That number is
+an ordinal within a single build, so the same number does not denote the same
+locus in another build and cross-build comparisons have to be made on variant
+IDs.
+
+Three filters decide what survives. A locus is kept only if it carries a GWAS
+credible set at 95% coverage or GWAS colocalization, so a locus supported only
+by a cs70 or cs50 set is dropped. A locus is kept only if its best GWAS p-value
+is below 1e-5. Each surviving locus is then represented by up to five variants
+whose GWAS PIP or VCP exceeds 0.1; where no variant clears 0.1, the single best
+one is shown, ranked on the GWAS probability first and the xQTL probability
+second. GWAS significance is reported in bands: p < 1e-5, p < 1e-6, p < 5e-8.
+
+Two flags are carried per locus: whether it is supported only by proxy-based
+GWAS, and whether it falls in the APOE region (chr19:43,905,790-45,905,791),
+which is reported separately because the extreme linkage disequilibrium there
+makes fine-mapping and colocalization hard to read.
+
+### Step 6: tiers, outputs and provenance
+
+Tiers are assigned per variant, gene and context group by the rules in the next
+section, and each gene is reported at the strongest tier it reaches anywhere.
+The build writes the locus-level summary, the variant-level membership table and
+the unified workbook to `$AD_LOCI_OUT`, together with a `_provenance.csv`
+recording the commit, host, time and the exact configuration the run used, and a
+copy of the two config tables as they stood. `scripts/validate_outputs.R` then
+checks that release: the expected tables are present, 188 loci, 508 genes, and
+the published tier distribution.
+
+The output directory is deliberately created empty. The GWAS credible-set
+harmonization recomputes from its inputs rather than reusing a previous
+release's artifacts, so a rerun cannot silently inherit stale intermediate
+files.
 
 ## Confidence tiers
 

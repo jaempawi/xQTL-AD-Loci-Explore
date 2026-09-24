@@ -1,17 +1,23 @@
 #!/bin/bash -l
 ## End-to-end rebuild of the AD loci table from this repository.
-##   qsub run_pipeline.qsub
-## Override the output directory:  qsub -v AD_LOCI_OUT=/path run_pipeline.qsub
+##   qsub scripts/run_pipeline.qsub
+## Override the output directory:  qsub -v AD_LOCI_OUT=/path scripts/run_pipeline.qsub
 #$ -P xqtl
 #$ -N adloci_e2e
 #$ -l h_rt=24:00:00
 #$ -pe omp 8
 #$ -l mem_per_core=12G
 #$ -j y
-#$ -o /restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL/logs/adloci_e2e_$JOB_ID.log
+#$ -o adloci_e2e_$JOB_ID.log
 #$ -V
 
-REPO=/restricted/projectnb/xqtl/jaempawi/xqtl/xQTL-AD-Loci-Explore
+## Repository root. SGE copies the job script to a spool directory, so this
+## cannot be derived from the script's own path; it is the directory the job
+## was submitted from, or AD_LOCI_REPO if set.
+REPO=${AD_LOCI_REPO:-${SGE_O_WORKDIR:-$PWD}}
+if [ ! -f "$REPO/scripts/build_AD_locus_table.R" ]; then
+  echo "not a repository checkout: $REPO" >&2; exit 1
+fi
 export AD_LOCI_ROOT=${AD_LOCI_ROOT:-/restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL}
 export AD_LOCI_STAGING=${AD_LOCI_STAGING:-$AD_LOCI_ROOT/repro/main_text/5_AD_xQTL_genes_cis_trans/staging/gene_priorization_table}
 OUT=${AD_LOCI_OUT:-$AD_LOCI_ROOT/out_e2e_$(date +%Y%m%d_%H%M)}

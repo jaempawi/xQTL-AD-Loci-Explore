@@ -1,4 +1,5 @@
 # outputs
+adloci_e2e_*.log
 out_*/
 *.Rproj.user
 .Rhistory
