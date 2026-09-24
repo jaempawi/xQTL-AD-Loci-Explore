@@ -13,7 +13,7 @@
 ## and metadata rows for the same --name are replaced, not duplicated.
 suppressPackageStartupMessages({library(data.table)})
 
-ROOT <- Sys.getenv("AD_LOCI_ROOT", unset = "/restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL")
+ROOT <- Sys.getenv("AD_LOCI_ROOT", unset = getwd())
 STG  <- file.path(ROOT,"repro/main_text/5_AD_xQTL_genes_cis_trans/staging/gene_priorization_table")
 
 a <- commandArgs(TRUE); getarg <- function(k,d=NA){i<-match(k,a); if(is.na(i)) d else a[i+1]}

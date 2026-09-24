@@ -3,7 +3,7 @@
 # Step 1 measures, Step 2 transfers. Nothing moves until you run step 2.
 
 ROOT=/mnt/lustre/lab/gwang/mmcloud_2026/ftp_fgc_xqtl
-DEST=jaempawi@scc1.bu.edu:/restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL/
+DEST=<user>@scc1.bu.edu:${AD_LOCI_ROOT:?set AD_LOCI_ROOT}/
 LIST=${1:-/tmp/transfer_list_minimal.txt}
 
 cd "$ROOT" || { echo "cannot cd $ROOT"; exit 1; }

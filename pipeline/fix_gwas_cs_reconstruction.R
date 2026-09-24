@@ -10,7 +10,7 @@
 suppressMessages({library(data.table); library(stringr)})
 args <- commandArgs(trailingOnly=TRUE)
 OUT  <- if (length(args)) args[1] else stop("need out dir")
-PR <- Sys.getenv("AD_LOCI_ROOT", unset = "/restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL")
+PR <- Sys.getenv("AD_LOCI_ROOT", unset = getwd())
 STG  <- file.path(PR,"repro/main_text/5_AD_xQTL_genes_cis_trans/staging/gene_priorization_table")
 fp   <- function(d,f) file.path(d,f)
 ckpt <- fp(OUT,'all_adlocis_extended_any0.8ANDmin0.5union_withfsusie.csv.gz')

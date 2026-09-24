@@ -53,9 +53,9 @@ shiny::runApp("/path/to/shiny_app/")
 ## Option C: GitHub Pages (HTML version, no server needed)
 Use `AD_xQTL_academic.html` instead of the Shiny app:
 1. Rename to `index.html`
-2. Push to your `jaempawi/xqtl-paper` repo root (or a `docs/` folder)
+2. Push to your `<user>/xqtl-paper` repo root (or a `docs/` folder)
 3. Go to Settings → Pages → Source: main branch → `/` (or `/docs`)
-4. Live at: `https://jaempawi.github.io/xqtl-paper/`
+4. Live at: `https://<user>.github.io/xqtl-paper/`
 
 No server, no cost, no expiry. Best for a permanent consortium URL.
 

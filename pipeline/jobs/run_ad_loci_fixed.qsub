@@ -7,9 +7,9 @@
 #$ -pe omp 8
 #$ -l mem_per_core=12G
 #$ -j y
-#$ -o /restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL/logs/adloci_$JOB_ID.log
+#$ -o ${AD_LOCI_ROOT:?set AD_LOCI_ROOT}/logs/adloci_$JOB_ID.log
 #$ -V
-ROOT=/restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL
+ROOT=${AD_LOCI_ROOT:?set AD_LOCI_ROOT}
 cd $ROOT; mkdir -p logs
 OUT=${AD_LOCI_OUT:-$ROOT/out_$(date +%Y%m%d)}
 STG=$ROOT/repro/main_text/5_AD_xQTL_genes_cis_trans/staging/gene_priorization_table

@@ -1009,7 +1009,7 @@ for (.cc in intersect(c('cs_coverage_0.95','cs_coverage_0.7','cs_coverage_0.5'),
   resfp[!is.na(PIP)]
   
   #export
-  #fwrite(resfp,ROOTP('interactive_analysis/adpelle1/export/AD_GWAS_finemapping_109_blocks_top_loci_unified_withAllCoS_any0.8ANDmin0.5_converged.csv.gz'))
+  #fwrite(resfp,ROOTP('interactive_analysis/<user>/export/AD_GWAS_finemapping_109_blocks_top_loci_unified_withAllCoS_any0.8ANDmin0.5_converged.csv.gz'))
   
   fwrite(resfp,fp(out,'res_all_single_gwas_finemapping_cs50orgreater_unified_withAllCoS_any0.8ANDmin0.5_converged.csv.gz'))
   
@@ -1258,8 +1258,8 @@ res_twas<-fread(fp(out,'res_AD_XWAS.csv.gz'))
 #                    by=c('context','gene_ID'),all.x = T)
 #     
 #     #export
-#     fwrite(mr_resf[order(`#chr`,start)],ROOTP('interactive_analysis/restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL/interactive_analysis/adpelle1/export/FunGen_mr.exported.bed.gz'))
-#     mr_resf<-fread(ROOTP('interactive_analysis/restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL/interactive_analysis/adpelle1/export/FunGen_mr.exported.bed.gz'))
+#     fwrite(mr_resf[order(`#chr`,start)],ROOTP('interactive_analysis$AD_LOCI_ROOT/interactive_analysis/<user>/export/FunGen_mr.exported.bed.gz'))
+#     mr_resf<-fread(ROOTP('interactive_analysis$AD_LOCI_ROOT/interactive_analysis/<user>/export/FunGen_mr.exported.bed.gz'))
 #     
 #     #add to mtd
 #     mtd<-fread(metadata_analysis)
@@ -1267,7 +1267,7 @@ res_twas<-fread(fp(out,'res_AD_XWAS.csv.gz'))
 #       'Data Type'='Gene & GWAS',
 #       Cohort='ROSMAP & MSBB & AD',
 #       Method='MR',
-#       Path='interactive_analysis/restricted/projectnb/xqtl/jaempawi/xqtl/AD_loci_xQTL/interactive_analysis/adpelle1/export/FunGen_mr.exported.bed.gz'),
+#       Path='interactive_analysis$AD_LOCI_ROOT/interactive_analysis/<user>/export/FunGen_mr.exported.bed.gz'),
 #       fill=TRUE)
 #     mtd[Method=='MR']
 #     fwrite(mtd,metadata_analysis)
@@ -1731,7 +1731,7 @@ if(!file.exists(summary_file_ad)|update_ctwasad){
 # # [1] "EPDR1"      "MAP3K1"     "GTPBP1"     "RBX1"       "ZFYVE21"    "RIPK2"      "PLA2G12A"   "HS3ST3B1"   "UBA2"      
 # # [10] "COL5A1"     "RPS15A"     "PLXNC1"     "ABCA8"      "ZCCHC24"    "SMG8"       "TRANK1"     "PIK3CD"     "SLC16A11"  
 # # [19] "PACS2"      "GPR141"     "XPNPEP3"    "IGHG2"      "AP000295.1" "IFNAR2"     "EEF1G"   
-# msig<-fread(ROOTP('interactive_analysis/adpelle1/github.com/AlexandrePelletier/xqtl-paper/resources/all_CPandGOs_gene_and_genesets.csv.gz'))
+# msig<-fread(ROOTP('interactive_analysis/<user>/github.com/AlexandrePelletier/xqtl-paper/resources/all_CPandGOs_gene_and_genesets.csv.gz'))
 # resor<-OR3(trans[unique(res_ctwad$gene_ID),on='gene_id']$gene_name,split(msig$gene,msig$pathway),background =unique(msig$gene) )
 # resor #yes participate to e.g. GOBP_IMMUNE_RESPONSE_REGULATING_SIGNALING_PATHWAY (PIK3CD,MAP3K1,IGHG2); GOBP_POSITIVE_REGULATION_OF_PROTEOLYSIS (RBX1,RIPK2)
 # 
