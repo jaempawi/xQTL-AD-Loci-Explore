@@ -47,6 +47,7 @@ Inputs for how to obtain them.
 export AD_LOCI_ROOT=/path/to/AD_loci_xQTL      # where the input trees live
 export AD_LOCI_STAGING=/path/to/staging        # three precomputed tables, see Inputs
 export AD_LOCI_OUT=$AD_LOCI_ROOT/out_$(date +%Y%m%d)    # optional
+export AD_LOCI_CONFIG=/path/to/private/config          # optional, see Inputs
 
 Rscript scripts/build_AD_locus_table.R                 # -> $AD_LOCI_OUT
 Rscript scripts/validate_outputs.R  $AD_LOCI_OUT       # expected tables, 188 loci, 508 genes
