@@ -8,54 +8,67 @@ Live app: https://jenny-empawi.shinyapps.io/xQTL-AD-loci-Explore/
 ## Layout
 
 ```
-app/          Shiny application (runnable as-is)
-pipeline/     Scripts that build the locus-level tables
-  staging/    Metadata and helper functions the main script reads
-  jobs/       SGE submission scripts for the cluster
-  dev/        Ad-hoc inspection scripts; not pipeline steps
-data/188_loci/  Released locus- and variant-level tables for this build
-docs/         Deployment notes
+build_AD_locus_table.R   locus-level build: evidence integration and tier assignment
+gene_prio_utils.R        helper functions, including the T1-T6 tier rules
+validate_outputs.R       checks a release against the expectations of this build
+inputs_manifest.tsv      every input the build reads, and where it comes from
+config/                  metadata tables the build reads
+data/188_loci/           released locus- and variant-level tables
+app/                     Shiny application, runnable from a clone
+archive/                 superseded and ad-hoc scripts; not part of the pipeline
+DEPENDENCIES.md          R version and package versions
 ```
 
-## Requirements
+## Running it
 
-R with `data.table`, `stringr`, `openxlsx`, `shiny`, `ggplot2`, and `pecotmr`;
-Python 3 with `pandas`. The Excel summary step uses `openxlsx`.
-
-## Running the pipeline
-
-Both path roots are environment variables, so the pipeline is not tied to one
-filesystem:
+Two stages. Set the roots first:
 
 ```bash
-export AD_LOCI_ROOT=/path/to/AD_loci_xQTL     # where the input trees live
-export AD_LOCI_OUT=$AD_LOCI_ROOT/out_$(date +%Y%m%d)   # optional; defaults to out_<today>
+export AD_LOCI_ROOT=/path/to/AD_loci_xQTL        # where the input trees live
+export AD_LOCI_STAGING=/path/to/staging          # three precomputed tables, see below
+export AD_LOCI_OUT=$AD_LOCI_ROOT/out_$(date +%Y%m%d)   # optional
 ```
 
-Stage order:
+```bash
+Rscript build_AD_locus_table.R                   # -> $AD_LOCI_OUT
+Rscript validate_outputs.R  $AD_LOCI_OUT         # sanity-check the release
+Rscript app/build_shiny_data.R $AD_LOCI_OUT app/data.csv
+```
 
-1. `pipeline/fetch_from_hpc.sh` — stage input tables locally.
-2. `pipeline/add_evidence_source.R` — register an evidence source in
-   `staging/metadata_analysis.csv`. Registering a source there is the only step
-   needed to add one; the main script picks it up automatically.
-3. `pipeline/complete_ADlocus_level_summary_fixed.R` — the main build. Reads the
-   metadata, assembles fine-mapping, colocalization, TWAS/MR and cTWAS evidence
-   per variant and gene, assigns confidence tiers T1-T6, and writes the
-   per-variant tables plus the unified Excel summary into `$AD_LOCI_OUT`.
-4. `pipeline/tier_assign_202609.py` and `pipeline/classify_confidence.py` —
-   gene-level tier and confidence assignment over the tables from step 3.
-5. `pipeline/coloc_validate.py` — colocalization sanity checks.
-6. `app/build_shiny_data.R` — collapses the release into `app/data.csv`, the
-   single table the Explorer reads.
+The build checks every required input before it starts and stops with the list
+of anything missing, rather than failing part-way through a long run.
 
-### Confidence tiers
+## Inputs
 
-T1-T5 describe genes with localized AD-xQTL support, ordered by strength of
-evidence. **T6** covers genes supported only by gene-level TWAS/MR or cTWAS
-evidence, with no localized xQTL signal. Because the tier chain is evaluated
-over rows of the xQTL overlap table, a gene with no localized support never
-reaches the final branch; the main script therefore assigns T6 directly from
-the gene-level XWAS/MR and cTWAS tables produced earlier in the same run.
+`inputs_manifest.tsv` lists each input, the path it is read from, and its source.
+Paths under `AD_LOCI_ROOT` come from the FunGen-xQTL release on Synapse
+(`syn68872650`). Two entries in `config/metadata_analysis.csv` carry `<user>` and
+`<collaborator>` placeholders where tables were exported from per-user analysis
+directories; substitute your own layout.
+
+Three tables are too large to distribute with the code and are read from
+`AD_LOCI_STAGING`:
+
+| file | source |
+|---|---|
+| `gwas_variants_cor0.5.csv.gz` | Synapse `syn75082260` |
+| `res_APOE_interaction_summ.csv.gz` | available on request |
+| `res_msex_interaction_summ.csv.gz` | available on request |
+
+The correlation table drives the LD-based credible-set extension, so the released
+variant sets cannot be reproduced without it.
+
+## Confidence tiers
+
+`gene_prio_utils.R` assigns `top_confidence` per row during the build. T1-T5
+describe genes with localized AD-xQTL support, ordered by strength of evidence.
+**T6** covers genes supported only by gene-level TWAS/MR or cTWAS evidence, with
+no localized xQTL signal; because the tier chain is evaluated over rows of the
+xQTL overlap table, such a gene never reaches the final branch, so the build
+assigns T6 directly from the gene-level tables produced earlier in the same run.
+
+A gene is reported at its strongest tier. The app takes its tiers from the
+release, so the table and the Explorer cannot diverge.
 
 ## Running the app
 
@@ -63,16 +76,10 @@ the gene-level XWAS/MR and cTWAS tables produced earlier in the same run.
 shiny::runApp("app")
 ```
 
-`app/data.csv` is included, so the Explorer runs from a clone without the
+`app/data.csv` ships with the repository, so the Explorer runs without the
 pipeline.
 
 ## Data
 
-`data/188_loci/` holds the locus summary and the unified variant-level table
-for this build. Upstream inputs — GWAS fine-mapping exports, xQTL
-colocalization results and the LD reference — are not redistributed here; they
-are released through the AD Knowledge Portal on Synapse (`syn68872650`).
-
-Derived from ADSP/NIAGADS study data. Downstream use of the underlying
-individual-level and controlled-access resources is governed by their own data
-use terms.
+Derived from ADSP/NIAGADS study data. Use of the underlying controlled-access
+resources is governed by their own data use terms.

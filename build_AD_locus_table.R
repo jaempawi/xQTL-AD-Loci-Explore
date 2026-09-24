@@ -23,17 +23,39 @@
 PROJECT_ROOT <- Sys.getenv('AD_LOCI_ROOT',
                  unset = if (length(.file)) normalizePath(dirname(.file[1])) else getwd())
 ROOTP   <- function(...) file.path(PROJECT_ROOT, ...)
-STAGING <- ROOTP('repro/main_text/5_AD_xQTL_genes_cis_trans/staging/gene_priorization_table')
+## Repository layout: config/ holds the metadata tables, gene_prio_utils.R sits
+## beside this script. STAGING holds three precomputed tables that are too large
+## to distribute with the code; set AD_LOCI_STAGING to wherever they are.
+REPO <- if (length(.file)) normalizePath(dirname(.file[1])) else getwd()
+CONFIG <- file.path(REPO, 'config')
+STAGING <- Sys.getenv('AD_LOCI_STAGING',
+  unset = ROOTP('repro/main_text/5_AD_xQTL_genes_cis_trans/staging/gene_priorization_table'))
 cat('PROJECT_ROOT:', PROJECT_ROOT, '
 ')
-setwd(STAGING)
-source('gene_prio_utils.R')
+source(file.path(REPO, 'gene_prio_utils.R'))
+
+## ---- preflight -----------------------------------------------------------
+## Fail here with a readable list rather than part-way through a long run.
+.need <- c(
+  file.path(CONFIG, c('metadata_analysis.csv','contexts_metadata.csv',
+                      'columns_metadata.tsv','excel_metadata.tsv','pattern_coloring.tsv')),
+  file.path(STAGING, c('gwas_variants_cor0.5.csv.gz',
+                       'res_APOE_interaction_summ.csv.gz',
+                       'res_msex_interaction_summ.csv.gz')))
+.gone <- .need[!file.exists(.need)]
+if (length(.gone)) {
+  stop('missing required inputs:\n  ', paste(.gone, collapse='\n  '),
+       '\n\nConfig files ship with this repository. The three staging tables are\n',
+       'available separately: the LD table from Synapse syn75082260, the two interaction\n       summaries on request. Point AD_LOCI_STAGING at the directory holding them.',
+       call. = FALSE)
+}
+if (dir.exists(STAGING)) setwd(STAGING)
 #INPUT FILES
-metadata_analysis="metadata_analysis.csv"
-contexts_metadata="contexts_metadata.csv"
-columns_metadata="columns_metadata.tsv"
-excel_metadata="excel_metadata.tsv"
-pattern_coloring="pattern_coloring.tsv"
+metadata_analysis <- file.path(CONFIG, 'metadata_analysis.csv')
+contexts_metadata <- file.path(CONFIG, 'contexts_metadata.csv')
+columns_metadata <- file.path(CONFIG, 'columns_metadata.tsv')
+excel_metadata <- file.path(CONFIG, 'excel_metadata.tsv')
+pattern_coloring <- file.path(CONFIG, 'pattern_coloring.tsv')
 gp_coordinates_clean=ROOTP('gpQTL/gp_coordinates_clean.txt')
 cv2f_score_dir=ROOTP('analysis_result/cv2f/score/xqtl_feature_max_allcv2f/')
 gene_names=ROOTP('resource/references/Homo_sapiens.GRCh38.103.chr.reformatted.collapse_only.gene.region_list')

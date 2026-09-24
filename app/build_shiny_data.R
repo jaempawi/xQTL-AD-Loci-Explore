@@ -14,7 +14,7 @@
 #
 #   (B) TIER              - top_confidence (T1-T5). NOT produced by the pipeline.
 #                           Tier assignment is a downstream gene-prioritization step
-#                           (alexandre/complete_ADlocus_level_summary_202605.R) that
+#                           the locus-level build script that
 #                           no release carries. Joined from a preserved reference.
 #
 #   (C) GENE-LEVEL        - trans_*, ct_*, context, n_contexts, TWAS/MR/cTWAS flags.
@@ -36,10 +36,9 @@ release <- if (length(args) >= 1) args[1] else stop("usage: build_shiny_data.R <
 outfile <- if (length(args) >= 2) args[2] else "data_refreshed.csv"
 
 here      <- dirname(normalizePath(sub("--file=", "", grep("--file=", commandArgs(FALSE), value = TRUE)[1])))
-tier_ref  <- file.path(here, "..", "gene_tier_assignment_202605.csv")
 prev_data <- file.path(here, "data.csv")
 
-stopifnot(dir.exists(release), file.exists(tier_ref), file.exists(prev_data))
+stopifnot(dir.exists(release), file.exists(prev_data))
 
 # ---- (A) locus / variant evidence, from the release ------------------------
 xl <- list.files(release, pattern = "^unified_AD_loci_xQTL_summary.*\\.xlsx$", full.names = TRUE)
@@ -90,46 +89,24 @@ setnames(A, names(map), unname(map))
 message(sprintf("  (A) refreshed: %d rows, %d loci", nrow(A), uniqueN(A$ADlocus)))
 
 # ---- (B) tier assignment ----------------------------------------------------
-# Preferred: tiers computed FROM THIS RELEASE by classify_confidence.py, which
-# reproduces Alexandre's CL1-CL6 rules (gene_prio_utils.R). Those are keyed on
-# Ensembl gene_ID and cover T1-T6, so a gene with only TWAS evidence is labelled
-# T6 rather than silently blank.
-# Fallback: the published 202605 assignment, keyed on gene symbol, T1-T5 only.
-tier_computed <- if (length(args) >= 3) args[3] else {
-  cand <- list.files(file.path(here, ".."),
-                     pattern = paste0("^gene_tier_loci",
-                                      sub("^loci([0-9]+)_.*$", "\\1", basename(release)),
-                                      "_.*\\.csv$"), full.names = TRUE)
-  if (length(cand)) cand[1] else NA_character_
-}
-
-if (!is.na(tier_computed) && file.exists(tier_computed)) {
-  tiers <- fread(tier_computed)                    # gene_ID (Ensembl), tier, ...
-  tier_src <- basename(tier_computed); tier_key <- "gene"
-  # The tier file is keyed on Ensembl ID, but this table's gene_id column is
-  # carried forward from the PREVIOUS build by variant and no longer matches the
-  # refreshed gene symbol - joining on it assigns tiers to the wrong genes (a
-  # single gene ends up with two or three different tiers). Map Ensembl -> symbol
-  # on the GRCh38.103 reference and join on the symbol instead.
-  ref_path <- file.path(here, "..", "alexandre",
-                        "Homo_sapiens.GRCh38.103.chr.reformatted.collapse_only.gene.region_list")
-  if (!file.exists(ref_path)) stop("gene reference not found: ", ref_path)
-  ref <- fread(ref_path)
-  setnames(ref, c("#chr", "start", "end", "gene_id", "gene_name")[seq_len(ncol(ref))])
-  ref <- unique(ref[nzchar(gene_name), .(gene_ID = sub("\\..*$", "", gene_id), gene_name)], by = "gene_ID")
-  tiers <- merge(tiers[, .(gene_ID = sub("\\..*$", "", gene_ID), tier)], ref, by = "gene_ID")
-  n_unmapped <- nrow(tiers[is.na(gene_name)])
-  tiers <- unique(tiers[!is.na(gene_name), .(gene = gene_name, top_confidence = tier)], by = "gene")
-  message(sprintf("      mapped Ensembl -> symbol; %d unmapped dropped", n_unmapped))
-} else {
-  tiers <- fread(tier_ref)                         # gene, gene_id, tier, ADlocus
-  tier_key <- "gene"; tier_src <- basename(tier_ref)
-  tiers <- unique(tiers[, .(gene, top_confidence = tier)], by = "gene")
-}
+# Tiers come from the release itself. gene_prio_utils.R assigns top_confidence
+# (T1-T6) per row of res_AD_variants_xQTL.csv.gz during the locus-level build,
+# and that table also carries gene_name, so no external gene reference or
+# previously published tier file is needed. A gene is reported at its strongest
+# tier.
+tier_file <- file.path(release, "res_AD_variants_xQTL.csv.gz")
+if (!file.exists(tier_file))
+  stop("release is missing res_AD_variants_xQTL.csv.gz: ", tier_file)
+tt <- fread(tier_file, select = c("gene_name", "top_confidence"))
+tt <- tt[!is.na(top_confidence) & top_confidence != "" &
+         !is.na(gene_name) & gene_name != ""]
+tiers <- tt[, .(top_confidence = min(top_confidence)), by = .(gene = gene_name)]
+tier_src <- basename(tier_file); tier_key <- "gene"
 message(sprintf("  (B) tiers from %s, keyed on %s: %d genes (%s)",
                 tier_src, tier_key, nrow(tiers),
                 paste(sprintf("%s=%d", names(table(tiers$top_confidence)),
                               table(tiers$top_confidence)), collapse = " ")))
+
 
 # ---- (C) gene-level columns, carried forward -------------------------------
 prev <- fread(prev_data)
