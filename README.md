@@ -61,8 +61,10 @@ One row per exported analysis table:
 | summary_file, summary_file_ad | written by the build at run time; leave blank |
 | variant_level_method | whether the method contributes variant-level evidence |
 
-Paths under `$AD_LOCI_ROOT` come from the FunGen-xQTL release on Synapse
-(`syn68872650`). Some rows carry `<user>` and `<collaborator>` placeholders where
+Paths under `$AD_LOCI_ROOT` refer to the FunGen-xQTL release, Synapse
+`syn68872650`. The layout on Synapse does not necessarily mirror these relative
+paths; email jaempawi@bu.edu if you need help locating a particular table. Some
+rows carry `<user>` and `<collaborator>` placeholders where
 tables were exported from per-user analysis directories; replace these with the
 directory names in your own copy.
 
@@ -76,7 +78,7 @@ from `$AD_LOCI_STAGING`:
 | res_msex_interaction_summ.csv.gz | 1.6 MB | on request |
 
 The two interaction summaries are not redistributed publicly. To request them,
-open an issue on this repository or contact the maintainer directly.
+open an issue on this repository or email jaempawi@bu.edu.
 
 The correlation table drives the LD-based credible-set extension, so the
 released variant sets cannot be reproduced without it.

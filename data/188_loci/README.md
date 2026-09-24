@@ -14,9 +14,10 @@ Every table here comes from the same build. Verified locus and row counts:
 ## Not included here
 
 xQTL_all_methods_overlap_with_AD_loci_unified_cs95orColocs_Pval1e5.csv.gz is the
-long-form table with one row per variant-locus-method-context-gene. At 6.1 GB
-(145 MB for the noTrans variant) it exceeds what a git repository can hold and is
-distributed through Synapse instead.
+long-form table with one row per variant-locus-method-context-gene. At 6.1 GB it
+exceeds what a git repository can hold, as does the noTrans variant at 145 MB.
+Both are available on request: open an issue on this repository or email
+jaempawi@bu.edu.
 
 The unfiltered AD_loci_unified_cs95orColocs.csv.gz spans 450 candidate regions
 before the p-value filter, so it does not describe this release and is not
