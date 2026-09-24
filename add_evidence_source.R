@@ -8,14 +8,17 @@
 ##   Rscript add_evidence_source.R --name transmap \
 ##       --bed trans_xQTL_only_colocalization_summary_table.bed
 ##
-## Then add the name to TOPLOCI_SOURCES in complete_ADlocus_level_summary.R and
-## rerun the pipeline. Safe to re-run: conversion is skipped if outputs exist,
-## and metadata rows for the same --name are replaced, not duplicated.
+## Then rerun build_AD_locus_table.R. The build auto-detects any Method in
+## metadata_analysis.csv that points at per-context toploci files and has no
+## dedicated loader, so registering the rows is the only step needed. Safe to
+## re-run: conversion is skipped if outputs exist, and metadata rows for the
+## same --name are replaced, not duplicated.
 suppressPackageStartupMessages({library(data.table)})
 
 ROOT <- Sys.getenv("AD_LOCI_ROOT", unset = getwd())
-STG  <- file.path(ROOT,"repro/main_text/5_AD_xQTL_genes_cis_trans/staging/gene_priorization_table")
-
+.f <- sub("^--file=", "", commandArgs(FALSE)[grep("^--file=", commandArgs(FALSE))])
+REPO <- if (length(.f)) normalizePath(dirname(.f[1])) else getwd()
+STG <- Sys.getenv("AD_LOCI_CONFIG", unset = file.path(REPO, "config"))
 a <- commandArgs(TRUE); getarg <- function(k,d=NA){i<-match(k,a); if(is.na(i)) d else a[i+1]}
 NAME <- getarg("--name"); BED <- getarg("--bed"); DIR <- getarg("--dir", paste0("trans_toploci_",NAME))
 STAMP <- format(Sys.Date(), "%Y%m%d")
@@ -91,4 +94,4 @@ if (length(need)) {
   fwrite(rbind(ctxmeta, add[, names(ctxmeta), with=FALSE]), cf)
   cat("[4] contexts_metadata.csv: added", length(need), "\n")
 } else cat("[4] contexts_metadata.csv: no new contexts needed\n")
-cat("\nDONE. Add '",NAME,"' to TOPLOCI_SOURCES in complete_ADlocus_level_summary.R, then qsub run_ad_loci_pipeline.qsub\n", sep="")
+cat("\nDONE. Registered '",NAME,"' in metadata_analysis.csv; rerun build_AD_locus_table.R.\n", sep="")
