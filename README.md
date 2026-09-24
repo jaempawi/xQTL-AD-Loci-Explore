@@ -8,15 +8,17 @@ Live app: https://jenny-empawi.shinyapps.io/xQTL-AD-loci-Explore/
 ## Layout
 
 ```
-build_AD_locus_table.R    locus-level build: evidence integration and tier assignment
-gene_prio_utils.R         helper functions, including the T1-T6 tier rules
-add_evidence_source.R     register a new evidence source (see "Adding data")
-validate_outputs.R        check a release against the expectations of this build
-config/                   metadata tables the build reads
-data/                     released tables, one directory per build
-app/                      Shiny application, runnable from a clone
-archive/                  superseded and ad-hoc scripts; not part of the pipeline
-DEPENDENCIES.md           R version and package versions
+scripts/
+  build_AD_locus_table.R   locus-level build: evidence integration and tier assignment
+  gene_prio_utils.R        helper functions, including the T1-T6 tier rules
+  add_evidence_source.R    register a new evidence source (see 'Adding data')
+  validate_outputs.R       check a release against the expectations of this build
+run_pipeline.qsub          end-to-end job script for the SCC scheduler
+config/                    metadata tables the build reads
+data/                      released tables, one directory per build
+app/                       Shiny application, runnable from a clone
+archive/                   superseded and ad-hoc scripts; not part of the pipeline
+DEPENDENCIES.md            R version and package versions
 ```
 
 ## Requirements
@@ -37,8 +39,8 @@ export AD_LOCI_ROOT=/path/to/AD_loci_xQTL      # where the input trees live
 export AD_LOCI_STAGING=/path/to/staging        # three precomputed tables, see Inputs
 export AD_LOCI_OUT=$AD_LOCI_ROOT/out_$(date +%Y%m%d)    # optional
 
-Rscript build_AD_locus_table.R                 # -> $AD_LOCI_OUT
-Rscript validate_outputs.R  $AD_LOCI_OUT       # expected tables, 188 loci, 508 genes
+Rscript scripts/build_AD_locus_table.R                 # -> $AD_LOCI_OUT
+Rscript scripts/validate_outputs.R  $AD_LOCI_OUT       # expected tables, 188 loci, 508 genes
 Rscript app/build_shiny_data.R $AD_LOCI_OUT app/data.csv
 ```
 
@@ -89,13 +91,13 @@ To add a new evidence source you register it in `config/metadata_analysis.csv`.
 The build auto-detects any Method there that points at per-context toploci files
 and has no dedicated loader, so registration is the only step.
 
-For a ColocBoost-style colocalization summary, `add_evidence_source.R` does the
+For a ColocBoost-style colocalization summary, `scripts/add_evidence_source.R` does the
 conversion and registration for you:
 
 ```bash
-Rscript add_evidence_source.R --name transmap \
+Rscript scripts/add_evidence_source.R --name transmap \
         --bed trans_xQTL_only_colocalization_summary_table.bed
-Rscript build_AD_locus_table.R
+Rscript scripts/build_AD_locus_table.R
 ```
 
 It is safe to re-run: conversion is skipped when outputs already exist, and rows
@@ -124,12 +126,12 @@ lists delimited by `;`:
 It emits one toploci file per context with the columns the build expects:
 `#chr start end a1 a2 variant_ID region_ID event_ID cs_coverage_0.95 purity PIP z`.
 
-A source in any other format needs its own loader in `build_AD_locus_table.R`;
+A source in any other format needs its own loader in `scripts/build_AD_locus_table.R`;
 follow one of the existing `Method ==` blocks.
 
 ## Confidence tiers
 
-`gene_prio_utils.R` assigns `top_confidence` per row during the build. T1-T5
+`scripts/gene_prio_utils.R` assigns `top_confidence` per row during the build. T1-T5
 describe genes with localized AD-xQTL support, ordered by strength of evidence.
 **T6** covers genes supported only by gene-level TWAS/MR or cTWAS evidence, with
 no localized xQTL signal; because the tier chain is evaluated over rows of the

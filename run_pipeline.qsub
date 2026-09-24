@@ -34,13 +34,13 @@ cp config/contexts_metadata.csv "$OUT/_used_contexts_metadata.csv"
 ## out/ is intentionally left empty so the GWAS credible-set harmonisation
 ## recomputes rather than reusing a previous release's artifacts.
 echo "START $(date) out=$OUT"
-~/.pixi/bin/Rscript build_AD_locus_table.R
+~/.pixi/bin/Rscript scripts/build_AD_locus_table.R
 rc=$?
 echo "BUILD_RC=$rc  $(date)"
 
 if [ $rc -eq 0 ]; then
   echo "---- validate ----"
-  ~/.pixi/bin/Rscript validate_outputs.R "$OUT"
+  ~/.pixi/bin/Rscript scripts/validate_outputs.R "$OUT"
   echo "VALIDATE_RC=$?"
 fi
 echo "END $(date)"

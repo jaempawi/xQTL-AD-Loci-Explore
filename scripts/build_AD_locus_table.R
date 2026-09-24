@@ -20,19 +20,20 @@
 ## Override with AD_LOCI_ROOT; otherwise derived from this script's location.
 .args <- commandArgs(FALSE)
 .file <- sub('^--file=', '', .args[grep('^--file=', .args)])
-PROJECT_ROOT <- Sys.getenv('AD_LOCI_ROOT',
-                 unset = if (length(.file)) normalizePath(dirname(.file[1])) else getwd())
+## This script lives in scripts/; the repository root is its parent directory.
+SCRIPTS <- if (length(.file)) normalizePath(dirname(.file[1])) else file.path(getwd(), 'scripts')
+REPO <- if (length(.file)) dirname(SCRIPTS) else getwd()
+PROJECT_ROOT <- Sys.getenv('AD_LOCI_ROOT', unset = REPO)
 ROOTP   <- function(...) file.path(PROJECT_ROOT, ...)
 ## Repository layout: config/ holds the metadata tables, gene_prio_utils.R sits
 ## beside this script. STAGING holds three precomputed tables that are too large
 ## to distribute with the code; set AD_LOCI_STAGING to wherever they are.
-REPO <- if (length(.file)) normalizePath(dirname(.file[1])) else getwd()
 CONFIG <- file.path(REPO, 'config')
 STAGING <- Sys.getenv('AD_LOCI_STAGING',
   unset = ROOTP('repro/main_text/5_AD_xQTL_genes_cis_trans/staging/gene_priorization_table'))
 cat('PROJECT_ROOT:', PROJECT_ROOT, '
 ')
-source(file.path(REPO, 'gene_prio_utils.R'))
+source(file.path(SCRIPTS, 'gene_prio_utils.R'))
 
 ## ---- preflight -----------------------------------------------------------
 ## Fail here with a readable list rather than part-way through a long run.

@@ -17,7 +17,8 @@ suppressPackageStartupMessages({library(data.table)})
 
 ROOT <- Sys.getenv("AD_LOCI_ROOT", unset = getwd())
 .f <- sub("^--file=", "", commandArgs(FALSE)[grep("^--file=", commandArgs(FALSE))])
-REPO <- if (length(.f)) normalizePath(dirname(.f[1])) else getwd()
+## This script lives in scripts/; the repository root is its parent directory.
+REPO <- if (length(.f)) dirname(normalizePath(dirname(.f[1]))) else getwd()
 STG <- Sys.getenv("AD_LOCI_CONFIG", unset = file.path(REPO, "config"))
 a <- commandArgs(TRUE); getarg <- function(k,d=NA){i<-match(k,a); if(is.na(i)) d else a[i+1]}
 NAME <- getarg("--name"); BED <- getarg("--bed"); DIR <- getarg("--dir", paste0("trans_toploci_",NAME))
