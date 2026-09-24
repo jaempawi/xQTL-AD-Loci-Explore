@@ -69,11 +69,14 @@ directory names in your own copy.
 Three precomputed tables are too large to distribute with the code and are read
 from `$AD_LOCI_STAGING`:
 
-| file | source |
-|---|---|
-| gwas_variants_cor0.5.csv.gz | Synapse `syn75082260` |
-| res_APOE_interaction_summ.csv.gz | see the shared drive folder |
-| res_msex_interaction_summ.csv.gz | see the shared drive folder |
+| file | size | source |
+|---|---|---|
+| gwas_variants_cor0.5.csv.gz | 295 MB | Synapse `syn75082260` |
+| res_APOE_interaction_summ.csv.gz | 45 MB | on request |
+| res_msex_interaction_summ.csv.gz | 1.6 MB | on request |
+
+The two interaction summaries are not redistributed publicly. To request them,
+open an issue on this repository or contact the maintainer directly.
 
 The correlation table drives the LD-based credible-set extension, so the
 released variant sets cannot be reproduced without it.
